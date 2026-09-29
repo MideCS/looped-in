@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Open in Gmail</title>
+<style>
+  :root { --bg: #f6f6f4; --text: #1d1d1b; --muted: #6b6b66; --accent: #0f6cbd; --line: #e2e2dd; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --text: #ededea; --muted: #a3a39d; --accent: #4ea1ff; --line: #33332f; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 28px 16px; }
+  p { color: var(--muted); }
+  a { display: block; text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-weight: 600;
+      text-decoration: none; border: 1px solid var(--line); color: var(--text); }
+  a.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <p>Your draft is saved in the email's thread in Gmail.</p>
+  <a class="primary" id="app" href="#">Open in the Gmail app</a>
+  <a id="web" href="#">Open Gmail on the web</a>
+</main>
+<script>
+  // Both links ride after the "#", so GitHub never sees them.
+  const p = new URLSearchParams(location.hash.slice(1));
+  const web = p.get("web") || "https://mail.google.com/mail/mu/mp/#tl/Drafts";
+  const appLink = p.get("app") || "";
+  const android = /Android/i.test(navigator.userAgent);
+  // Telegram's browser never hands links to apps, so on Android this names the Gmail app outright.
+  // gmail.app.goo.gl is the Gmail app's own link handler; with tf=cv it opens the thread named in
+  // the link. If the app isn't there, Chrome goes to the web thread instead.
+  const target = android && appLink
+    ? `intent://${appLink.replace(/^https:\/\//, "")}#Intent;scheme=https;package=com.google.android.gm;` +
+      `S.browser_fallback_url=${encodeURIComponent(web)};end`
+    : web;
+  document.getElementById("app").href = target;
+  document.getElementById("web").href = web;
+  location.replace(target);
+</script>
+</body>
+</html>

@@ -54,8 +54,19 @@ def test_prompt_has_notes_examples_rules_and_feedback_and_marks_your_messages():
 
 
 def test_gmail_link_opens_the_conversation_or_drafts():
-    assert drafting.gmail_link(ME, "18f2a") ==         "https://mail.google.com/mail/mu/mp/?authuser=me%40gmail.com#cv/Drafts/18f2a"
+    assert drafting.gmail_web(ME, "18f2a") ==         "https://mail.google.com/mail/mu/mp/?authuser=me%40gmail.com#cv/Drafts/18f2a"
     assert drafting.gmail_link(ME, "").endswith("#tl/Drafts")
+
+
+def test_gmail_app_link_names_the_thread_the_way_the_app_reads_it():
+    from urllib.parse import parse_qs, unquote, urlsplit
+    app = drafting.gmail_app(ME, "1a0e600fe2d5e3a3")
+    q = parse_qs(urlsplit(app).query)
+    assert q["account"] == [ME] and q["tf"] == ["cv"]
+    fragment = urlsplit(q["link"][0]).fragment
+    assert unquote(fragment.split("th=")[1]) == "#thread-f:1877543716006519715"
+    page = drafting.gmail_link(ME, "1a0e600fe2d5e3a3")
+    assert page.startswith(drafting.GMAIL_PAGE + "#app=https%3A%2F%2Fgmail.app.goo.gl")
 
 
 # -- routing your messages --------------------------------------------------

@@ -124,9 +124,28 @@ def outlook_link(email: Email, body: str) -> str:
     return full if len(full) <= MAX_LINK else base
 
 
-def gmail_link(account: str, thread_hex: str) -> str:
-    """The conversation with the draft in it, in Gmail's mobile web view (tested on Android: the
-    Gmail app itself only opens on the inbox from a link, while this lands on the thread with an
-    Edit Draft button). Drafts is a label every thread with a draft carries."""
+GMAIL_PAGE = "https://midecs.github.io/looped-in/gmail.html"
+
+
+def gmail_web(account: str, thread_hex: str) -> str:
+    """The conversation with the draft in it, in Gmail's mobile web view (Edit Draft at the bottom).
+    Drafts is a label every thread with a draft carries."""
     anchor = f"#cv/Drafts/{thread_hex}" if thread_hex else "#tl/Drafts"
     return f"https://mail.google.com/mail/mu/mp/?authuser={quote(account)}{anchor}"
+
+
+def gmail_app(account: str, thread_hex: str) -> str:
+    """A link the Gmail Android app opens straight to the conversation. Read from the app's own link
+    handler: gmail.app.goo.gl with tf=cv, the account's address, and th=#thread-f:<decimal thread id>
+    inside `link`. Tested on device."""
+    inner = f"https://mail.google.com/mail/u/0/#inbox?th={quote(f'#thread-f:{int(thread_hex, 16)}', safe='')}"
+    return f"https://gmail.app.goo.gl/?link={quote(inner, safe='')}&account={quote(account, safe='')}&tf=cv"
+
+
+def gmail_link(account: str, thread_hex: str) -> str:
+    """The Telegram button: docs/gmail.html opens the Gmail app at the thread on Android (Telegram's
+    own browser never hands links to apps), and the mobile web thread anywhere else."""
+    web = gmail_web(account, thread_hex)
+    if not thread_hex:
+        return web
+    return f"{GMAIL_PAGE}#app={quote(gmail_app(account, thread_hex), safe='')}&web={quote(web, safe='')}"
