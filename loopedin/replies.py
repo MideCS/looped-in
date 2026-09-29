@@ -226,7 +226,7 @@ class Replies:
 
         draft_id = self.store.add_draft(f"{email.provider}:{email.id}", notes, result.body, message_id, link)
         self.tg.edit(self.chat, placeholder, render_draft(email, result, via_alias),
-                     reply_markup=draft_keyboard(draft_id, link, outlook=bool(via_alias)))
+                     reply_markup=draft_keyboard(draft_id, link, copy=result.body if via_alias else None))
         self.bot.log(f"draft {draft_id} ready for {email.subject[:50]}")
 
     def _discard_gmail_draft(self, row) -> None:
@@ -249,8 +249,11 @@ def render_draft(email: Email, result: drafting.Draft, outlook_from: str = "") -
     parts = [f"✉️ <b>Draft to {who}</b>{sent_as}\n<i>{esc(drafting.reply_subject(email.subject))}</i>", body]
     if result.missing:
         parts.append(f"⚠️ <i>You didn't say: {esc(result.missing)}</i>")
-    parts.append("Tap 📋 Copy &amp; open Outlook: Outlook opens searched for this email. Tap it, tap Reply and paste."
-                 if outlook_from else "Saved in Gmail Drafts. Open it, check it, and press Send there.")
+    if not outlook_from:
+        parts.append("Saved in Gmail Drafts. Open it, check it, and press Send there.")
+    else:
+        copy = "Tap 📋 Copy" if len(result.body) <= MAX_COPY else "Tap Copy on the reply above"
+        parts.append(f"{copy}, then ↗ Outlook: it opens searched for this email. Tap it, tap Reply and paste.")
     return "\n\n".join(parts) + SPACER
 
 
@@ -260,9 +263,20 @@ def done_keyboard(key: str, label: str = "✓ Done") -> dict | None:
     return {"inline_keyboard": [[{"text": label, "callback_data": f"dn:{key}"}]]}
 
 
-def draft_keyboard(draft_id: int, link: str, outlook: bool = False) -> dict:
+MAX_COPY = 256   # Telegram's limit for a copy button; longer replies use the Copy label on the <pre> block
+
+
+def draft_keyboard(draft_id: int, link: str, copy: str | None = None) -> dict:
+    """Gmail drafts get one button. Outlook replies (copy = the reply) get Telegram's own copy button,
+    which copies with no page in between, next to the link that opens Outlook."""
+    if copy is None:
+        first = [{"text": "📧 Open in Gmail", "url": link}]
+    else:
+        first = [{"text": "↗ Outlook", "url": link}]
+        if len(copy) <= MAX_COPY:
+            first.insert(0, {"text": "📋 Copy", "copy_text": {"text": copy}})
     return {"inline_keyboard": [
-        [{"text": "📋 Copy & open Outlook" if outlook else "📧 Open in Gmail", "url": link}],
+        first,
         [{"text": "✏️ Change", "callback_data": f"dr:{draft_id}:change"},
          {"text": "❌ Skip", "callback_data": f"dr:{draft_id}:skip"}],
     ]}

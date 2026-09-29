@@ -204,8 +204,16 @@ def test_long_bodies_are_left_out_of_the_outlook_link():
 def test_outlook_draft_card_has_copyable_text_and_the_outlook_button():
     card = replies.render_draft(mail(via="mit"), drafting.Draft("Hi <Sam>", ""), "me@mit.edu")
     assert "From <b>me@mit.edu</b>" in card and "<pre>Hi &lt;Sam&gt;</pre>" in card
-    keyboard = replies.draft_keyboard(3, "https://outlook.office.com/x", outlook=True)
-    assert keyboard["inline_keyboard"][0][0] == {"text": "📋 Copy & open Outlook", "url": "https://outlook.office.com/x"}
+    keyboard = replies.draft_keyboard(3, "https://x/open.html#a", copy="Hi Sam")
+    assert keyboard["inline_keyboard"][0] == [{"text": "📋 Copy", "copy_text": {"text": "Hi Sam"}},
+                                              {"text": "↗ Outlook", "url": "https://x/open.html#a"}]
+
+
+def test_long_outlook_replies_skip_the_copy_button():
+    keyboard = replies.draft_keyboard(3, "https://x/open.html#a", copy="x" * 300)
+    assert keyboard["inline_keyboard"][0] == [{"text": "↗ Outlook", "url": "https://x/open.html#a"}]
+    card = replies.render_draft(mail(via="mit"), drafting.Draft("x" * 300, ""), "me@mit.edu")
+    assert "Tap Copy on the reply above" in card
 
 
 
