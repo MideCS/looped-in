@@ -54,8 +54,10 @@ def test_prompt_has_notes_examples_rules_and_feedback_and_marks_your_messages():
 
 
 def test_gmail_link_opens_the_conversation_or_drafts():
-    assert drafting.gmail_link(ME, "18f2a") == "https://mail.google.com/mail/?authuser=me@gmail.com#all/18f2a"
-    assert drafting.gmail_link(ME, "").endswith("#drafts")
+    assert drafting.gmail_web(ME, "18f2a") == "https://mail.google.com/mail/?authuser=me@gmail.com#all/18f2a"
+    assert drafting.gmail_web(ME, "").endswith("#drafts")
+    link = drafting.gmail_link(ME, "18f2a")
+    assert link.startswith(drafting.GMAIL_PAGE + "#u=https%3A%2F%2Fmail.google.com") and link.endswith("18f2a")
 
 
 # -- routing your messages --------------------------------------------------

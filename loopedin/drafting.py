@@ -124,7 +124,15 @@ def outlook_link(email: Email, body: str) -> str:
     return full if len(full) <= MAX_LINK else base
 
 
-def gmail_link(account: str, thread_hex: str) -> str:
-    """Opens the conversation (with the draft in it) in Gmail; on Android this should open the Gmail app."""
+GMAIL_PAGE = "https://midecs.github.io/looped-in/gmail.html"
+
+
+def gmail_web(account: str, thread_hex: str) -> str:
+    """The conversation (with the draft in it) in Gmail on the web."""
     anchor = f"#all/{thread_hex}" if thread_hex else "#drafts"
     return f"https://mail.google.com/mail/?authuser={account}{anchor}"
+
+
+def gmail_link(account: str, thread_hex: str) -> str:
+    """Goes through docs/gmail.html, which opens the Gmail app on phones (Telegram's own browser won't)."""
+    return f"{GMAIL_PAGE}#u={quote(gmail_web(account, thread_hex), safe='')}"

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Open Gmail</title>
+<style>
+  :root { --bg: #f6f6f4; --text: #1d1d1b; --muted: #6b6b66; --accent: #0f6cbd; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161615; --text: #ededea; --muted: #a3a39d; --accent: #4ea1ff; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 28px 16px; }
+  p { color: var(--muted); }
+  a { display: block; text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-weight: 600;
+      text-decoration: none; background: var(--accent); color: #fff; }
+  a.plain { background: none; color: var(--text); border: 1px solid var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <p>Your draft is saved in Gmail Drafts, in the email's conversation.</p>
+  <a id="app" href="#">Open the Gmail app</a>
+  <a id="web" class="plain" href="#">Open Gmail on the web</a>
+</main>
+<script>
+  // The Gmail web address of the conversation rides after the "#", so GitHub never sees it.
+  const web = new URLSearchParams(location.hash.slice(1)).get("u") || "https://mail.google.com/mail/";
+  const android = /Android/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent);
+  // Telegram opens links in its own browser, which never hands mail.google.com to the Gmail app,
+  // so on phones this page names the app outright. (The app opens on your inbox: it ignores which
+  // conversation the link points at. The thread with the draft shows a red "Draft" label.)
+  const app = android
+    ? `intent://${web.replace(/^https:\/\//, "")}#Intent;scheme=https;package=com.google.android.gm;` +
+      `S.browser_fallback_url=${encodeURIComponent(web)};end`
+    : ios ? "googlegmail://" : web;
+  document.getElementById("app").href = app;
+  document.getElementById("web").href = web;
+  location.replace(app);
+</script>
+</body>
+</html>
