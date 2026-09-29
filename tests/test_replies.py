@@ -196,6 +196,14 @@ def test_mit_reply_opens_outlook_with_everything_filled_in():
     assert "subject=Re%3A%20Want%20to%20help" in link and "body=Hi%20Prof%2C%0A%0AThursday%20works%21" in link
 
 
+def test_outlook_reply_quotes_the_original_and_trims_it_to_fit():
+    from urllib.parse import unquote
+    short = unquote(drafting.outlook_link(mail(via="mit", body="Who's your reference?"), "Jane Doe."))
+    assert "Jane Doe.\n\n____" in short and "From: Sam Rivera <sam@acme.ai>" in short and "Who's your reference?" in short
+    long = drafting.outlook_link(mail(via="mit", body="word " * 2000), "Jane Doe.")
+    assert len(long) <= drafting.MAX_LINK and "Jane%20Doe." in long and "%E2%80%A6" in long   # trimmed, with …
+
+
 def test_long_bodies_are_left_out_of_the_outlook_link():
     link = drafting.outlook_link(mail(via="mit"), "x" * 5000)
     assert "body=" not in link and len(link) < drafting.MAX_LINK

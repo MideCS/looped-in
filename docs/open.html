@@ -47,15 +47,18 @@
     mailto: `mailto:${encodeURIComponent(to)}?${q}`,
     web: `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&${q}`,
   };
-  // Android: mailto opens the "which app?" chooser, and Outlook fills in To, subject and body.
-  // Pick Outlook with "Always" once and later taps go straight there. iOS: Outlook's own scheme.
+  // Android: an intent link hands the mailto straight to the Outlook app, skipping the "which app?"
+  // chooser. The second button is the plain mailto (chooser), in case Outlook isn't installed.
+  // iOS: Outlook's own scheme. Computers: Outlook on the web.
   const android = /Android/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent);
-  const primary = android ? links.mailto : ios ? links.outlook : links.web;
+  links.intent = `intent:${links.mailto}#Intent;action=android.intent.action.SENDTO;` +
+                 `package=com.microsoft.office.outlook;end`;
+  const primary = android ? links.intent : ios ? links.outlook : links.web;
+  const secondary = document.getElementById("secondary");
   document.getElementById("primary").href = primary;
-  document.getElementById("secondary").href = android || ios ? (android ? links.outlook : links.mailto) : links.mailto;
-  if (!android && !ios) document.getElementById("secondary").textContent = "Default mail app";
+  secondary.href = links.mailto;
+  secondary.textContent = android || ios ? "Choose a mail app" : "Default mail app";
   document.getElementById("web").href = links.web;
-  if (android) document.getElementById("hint").textContent = "If Android asks which app, choose Outlook and tap Always.";
   document.getElementById("meta").textContent = `To ${to} · ${subject}`;
   document.getElementById("body").textContent = body;
   if (to) location.href = primary;
