@@ -75,6 +75,13 @@
     go.textContent = ok ? "Copied ✓ Opening Outlook…" : "Couldn't copy — select the text above";
     if (ok) location.href = openOutlook;
   });
+
+  // The Telegram card already copied the reply with its own Copy button, so phones go straight to
+  // Outlook; this page only stays up if the jump fails (or on a computer).
+  if (android || ios) {
+    go.textContent = "Open Outlook";
+    location.replace(openOutlook);
+  }
 </script>
 </body>
 </html>
