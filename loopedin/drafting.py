@@ -108,37 +108,20 @@ def as_mime(email: Email, body: str, my_name: str, from_addr: str = "") -> tuple
     return msg.as_bytes(), message_id
 
 
-# A static page (docs/open.html, on GitHub Pages) that hands the reply to the Outlook app. Telegram
-# buttons only take https links, and the Outlook app ignores its web compose links. The reply rides
-# after the "#", which browsers never send to the server.
+# A static page (docs/open.html, on GitHub Pages): one tap copies the reply and opens the Outlook
+# app, where you open the email, tap Reply and paste, so it's a real reply in the thread. Links
+# can't open one particular email without mailbox access, which MIT blocks. Telegram buttons only
+# take https links, hence the page. The reply rides after the "#", which never reaches the server.
 OPEN_PAGE = "https://midecs.github.io/looped-in/open.html"
 MAX_LINK = 2000   # past this, leave the body out of the link; the card has it to copy
 
 
-def quoted_original(email: Email, text: str) -> str:
-    """The email being answered, under the reply the way Outlook quotes it, so the thread shows."""
-    when = email.date.astimezone().strftime("%A, %B %d, %Y %I:%M %p") if email.date else ""
-    who = f"{email.sender_name} <{email.sender_addr}>" if email.sender_name else email.sender_addr
-    return (f"\n\n________________________________\nFrom: {who}\nSent: {when}\nSubject: {email.subject}"
-            f"\n\n{text}")
-
-
 def outlook_link(email: Email, body: str) -> str:
-    """Opens a new Outlook message to the sender: "Re:" subject (so Outlook files it in the same
-    conversation), your reply, and the original quoted underneath, as much as fits in the link."""
-    to = quote(email.reply_to or email.sender_addr)
-    base = f"{OPEN_PAGE}#to={to}&subject={quote(reply_subject(email.subject))}"
-    if len(f"{base}&body={quote(body)}") > MAX_LINK:
-        return base          # the card has the text to copy
-    full = strip_quoted(email.body_text) or email.body_text
-    original = full
-    while original:      # trim the quoted original until the link fits
-        text = original if original == full else original.rstrip() + "…"
-        link = f"{base}&body={quote(body + quoted_original(email, text))}"
-        if len(link) <= MAX_LINK:
-            return link
-        original = original[:int(len(original) * 0.8)]
-    return f"{base}&body={quote(body)}"
+    who = email.sender_name or email.sender_addr
+    base = (f"{OPEN_PAGE}#from={quote(who)}&to={quote(email.reply_to or email.sender_addr)}"
+            f"&subject={quote(email.subject)}")
+    full = f"{base}&body={quote(body)}"
+    return full if len(full) <= MAX_LINK else base
 
 
 def gmail_link(account: str, thread_hex: str) -> str:

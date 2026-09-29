@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>Open in Outlook</title>
+<title>Reply in Outlook</title>
 <style>
   :root { --bg: #f6f6f4; --card: #fff; --text: #1d1d1b; --muted: #6b6b66; --accent: #0f6cbd; --line: #e2e2dd; }
   @media (prefers-color-scheme: dark) {
@@ -12,56 +12,65 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 480px; margin: 0 auto; padding: 32px 16px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
+  main { max-width: 480px; margin: 0 auto; padding: 28px 16px; }
+  h1 { font-size: 20px; margin: 0 0 6px; overflow-wrap: anywhere; }
   p { margin: 0 0 16px; color: var(--muted); }
+  ol { margin: 0 0 16px; padding-left: 20px; color: var(--muted); }
+  b { color: var(--text); overflow-wrap: anywhere; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-  .meta { font-size: 14px; color: var(--muted); margin-bottom: 8px; overflow-wrap: anywhere; }
   pre { margin: 0; white-space: pre-wrap; font: inherit; overflow-wrap: anywhere; }
-  a.button { display: block; text-align: center; text-decoration: none; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-weight: 600; }
-  a.primary { background: var(--accent); color: #fff; }
-  a.secondary { border: 1px solid var(--line); color: var(--text); }
+  .button { display: block; width: 100%; text-align: center; text-decoration: none; padding: 14px; border-radius: 10px;
+            margin-bottom: 10px; font: inherit; font-weight: 600; cursor: pointer; border: 1px solid var(--line);
+            background: none; color: var(--text); }
+  .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Your reply</h1>
-  <p>Opening Outlook. If nothing happens, tap the button.</p>
-  <div class="card">
-    <div class="meta" id="meta"></div>
-    <pre id="body"></pre>
-  </div>
-  <a class="button primary" id="primary" href="#">Open in Outlook</a>
-  <a class="button secondary" id="secondary" href="#">Try the Outlook app directly</a>
-  <a class="button secondary" id="web" href="#">Outlook on the web</a>
-  <p id="hint"></p>
+  <h1 id="title">Your reply</h1>
+  <ol>
+    <li>Tap the blue button: your reply is copied and Outlook opens.</li>
+    <li>Open the email <span id="which"></span>.</li>
+    <li>Tap <b>Reply</b> and paste.</li>
+  </ol>
+  <div class="card"><pre id="body"></pre></div>
+  <button class="button primary" id="go">Copy reply &amp; open Outlook</button>
+  <a class="button" id="compose" href="#">Send as a new email instead</a>
 </main>
 <script>
-  // The draft travels after the "#", which browsers never send to the server:
-  // GitHub only ever serves this static file and never sees the email.
+  // The reply travels after the "#", which browsers never send to the server:
+  // GitHub only serves this static file and never sees the email.
   const p = new URLSearchParams(location.hash.slice(1));
-  const to = p.get("to") || "", subject = p.get("subject") || "", body = p.get("body") || "";
-  const q = `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  const links = {
-    outlook: `ms-outlook://compose?to=${encodeURIComponent(to)}&${q}`,
-    mailto: `mailto:${encodeURIComponent(to)}?${q}`,
-    web: `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&${q}`,
-  };
-  // Android: an intent link hands the mailto straight to the Outlook app, skipping the "which app?"
-  // chooser. The second button is the plain mailto (chooser), in case Outlook isn't installed.
-  // iOS: Outlook's own scheme. Computers: Outlook on the web.
+  const get = (k) => p.get(k) || "";
+  const [to, subject, body, from] = ["to", "subject", "body", "from"].map(get);
+  const enc = encodeURIComponent;
   const android = /Android/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent);
-  links.intent = `intent:${links.mailto}#Intent;action=android.intent.action.SENDTO;` +
-                 `package=com.microsoft.office.outlook;end`;
-  const primary = android ? links.intent : ios ? links.outlook : links.web;
-  const secondary = document.getElementById("secondary");
-  document.getElementById("primary").href = primary;
-  secondary.href = links.mailto;
-  secondary.textContent = android || ios ? "Choose a mail app" : "Default mail app";
-  document.getElementById("web").href = links.web;
-  document.getElementById("meta").textContent = `To ${to} · ${subject}`;
+
+  // Opens the Outlook app itself (Outlook links can't point at one email without mailbox access).
+  const openOutlook = android
+    ? "intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;" +
+      "package=com.microsoft.office.outlook;end"
+    : ios ? "ms-outlook://" : "https://outlook.office.com/mail/";
+  const mailto = `mailto:${enc(to)}?subject=${enc(subject.match(/^re:/i) ? subject : "Re: " + subject)}&body=${enc(body)}`;
+
+  document.getElementById("title").textContent = from ? `Reply to ${from}` : "Your reply";
+  const which = document.getElementById("which");
+  which.append(from ? "from " : "", Object.assign(document.createElement("b"), { textContent: from }),
+               subject ? `: “${subject}”` : "");
   document.getElementById("body").textContent = body;
-  if (to) location.href = primary;
+  document.getElementById("compose").href = mailto;
+
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    const area = Object.assign(document.createElement("textarea"), { value: text });
+    document.body.append(area); area.select();
+    const ok = document.execCommand("copy"); area.remove(); return ok;
+  }
+  document.getElementById("go").addEventListener("click", async (ev) => {
+    const ok = await copy(body);
+    ev.target.textContent = ok ? "Copied ✓ Opening Outlook…" : "Couldn't copy — select the text above";
+    if (ok) location.href = openOutlook;
+  });
 </script>
 </body>
 </html>

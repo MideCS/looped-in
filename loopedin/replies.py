@@ -249,7 +249,7 @@ def render_draft(email: Email, result: drafting.Draft, outlook_from: str = "") -
     parts = [f"✉️ <b>Draft to {who}</b>{sent_as}\n<i>{esc(drafting.reply_subject(email.subject))}</i>", body]
     if result.missing:
         parts.append(f"⚠️ <i>You didn't say: {esc(result.missing)}</i>")
-    parts.append("Opens a new Outlook message with this filled in. Check it and press Send there."
+    parts.append("Tap 📋 Copy &amp; open Outlook, open the email, tap Reply and paste."
                  if outlook_from else "Saved in Gmail Drafts. Open it, check it, and press Send there.")
     return "\n\n".join(parts) + SPACER
 
@@ -262,7 +262,7 @@ def done_keyboard(key: str, label: str = "✓ Done") -> dict | None:
 
 def draft_keyboard(draft_id: int, link: str, outlook: bool = False) -> dict:
     return {"inline_keyboard": [
-        [{"text": "✉️ Open in Outlook" if outlook else "📧 Open in Gmail", "url": link}],
+        [{"text": "📋 Copy & open Outlook" if outlook else "📧 Open in Gmail", "url": link}],
         [{"text": "✏️ Change", "callback_data": f"dr:{draft_id}:change"},
          {"text": "❌ Skip", "callback_data": f"dr:{draft_id}:skip"}],
     ]}
