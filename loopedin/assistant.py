@@ -85,7 +85,8 @@ Write for a phone screen, so it's scannable:
 "• <b>When:</b> Oct 30 – Nov 1".
 - Use <b>bold</b> only for labels and names, and <i>italics</i> sparingly. No other HTML, no \
 markdown, no headings.
-- Mention the email's digest number (#n) when it has one so they can refer to it.
+- Mention the email's digest number (#n) when the index gives it one, so they can refer to it. \
+A number is only ever digits (#2); categories like reply or fyi are never written with #.
 - Keep the whole answer under about 8 lines."""
 
 SCHEMA = {
