@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>looped-in</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b6860;
+    --faint: #9a968c;
+    --line: #e4e1da;
+    --hover: #f1efea;
+    --accent: #2f5bd3;
+    --accent-ink: #ffffff;
+    --unread: #2f5bd3;
+    --gmail: #c5402f;
+    --gmail-bg: #fbeae7;
+    --outlook: #1f6fc4;
+    --outlook-bg: #e6f0fb;
+    --ok: #237a45;
+    --ok-bg: #e5f3ea;
+    --bad: #b3261e;
+    --bad-bg: #fbe9e7;
+    --radius: 10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --panel: #1e1d1b; --ink: #ecebe7; --muted: #a8a49b; --faint: #77736b;
+      --line: #2f2e2b; --hover: #262522; --accent: #7aa2ff; --accent-ink: #0f1420; --unread: #7aa2ff;
+      --gmail: #f08a7c; --gmail-bg: #3a221e; --outlook: #7db7f0; --outlook-bg: #1c2b3b;
+      --ok: #6fcf94; --ok-bg: #1b3325; --bad: #f28b82; --bad-bg: #3b1f1d;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --panel: #1e1d1b; --ink: #ecebe7; --muted: #a8a49b; --faint: #77736b;
+    --line: #2f2e2b; --hover: #262522; --accent: #7aa2ff; --accent-ink: #0f1420; --unread: #7aa2ff;
+    --gmail: #f08a7c; --gmail-bg: #3a221e; --outlook: #7db7f0; --outlook-bg: #1c2b3b;
+    --ok: #6fcf94; --ok-bg: #1b3325; --bad: #f28b82; --bad-bg: #3b1f1d;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  button, input { font: inherit; color: inherit; }
+  a { color: var(--accent); }
+
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: -0.01em; }
+  header .step { color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+
+  main {
+    display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px;
+    max-width: 1200px; margin: 0 auto; padding: 20px 24px 48px;
+  }
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); padding: 16px 16px 40px; }
+    header { padding: 12px 16px; }
+  }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  .card h3 { font-size: 14px; margin: 0 0 4px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+
+  .acct { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .acct:first-of-type { border-top: 0; }
+  .acct .addr { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty-accts { color: var(--muted); margin: 0; }
+
+  .chip {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .02em;
+    padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  }
+  .chip.gmail { color: var(--gmail); background: var(--gmail-bg); }
+  .chip.outlook { color: var(--outlook); background: var(--outlook-bg); }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  input[type=text], input[type=email], input[type=password] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+    padding: 7px 12px; cursor: pointer;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); margin-top: 12px; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.small { padding: 3px 8px; font-size: 12px; }
+  .btn.primary-sm { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .linkish { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 4px; font-size: 12px; }
+  .linkish:hover { color: var(--bad); }
+
+  details.add { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  details.add summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.add summary::-webkit-details-marker { display: none; }
+  details.add summary::before { content: "+"; color: var(--muted); width: 12px; }
+  details.add[open] summary::before { content: "\2212"; }
+
+  .msg { font-size: 13px; padding: 8px 10px; border-radius: 8px; margin-top: 10px; }
+  .msg.ok { color: var(--ok); background: var(--ok-bg); }
+  .msg.bad { color: var(--bad); background: var(--bad-bg); }
+
+  .devcode { text-align: center; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; margin-top: 12px; }
+  .devcode .code { font: 600 24px/1.2 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .12em; margin: 6px 0; }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  .seg button { border: 0; background: none; padding: 6px 11px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--hover); font-weight: 600; }
+  .toolbar .spacer { flex: 1; }
+  .count { color: var(--muted); font-size: 13px; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; cursor: pointer; }
+
+  .list { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .row { display: grid; grid-template-columns: 10px minmax(0, 180px) minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+         padding: 10px 14px; border-top: 1px solid var(--line); cursor: pointer; }
+  .row:first-child { border-top: 0; }
+  .row:hover { background: var(--hover); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .row.unread .dot { background: var(--unread); }
+  .row.unread .from, .row.unread .subj { font-weight: 600; }
+  .from, .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .line .snip { color: var(--muted); }
+  .when { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  @media (max-width: 600px) {
+    .row { grid-template-columns: 10px minmax(0, 1fr) auto; grid-template-areas: "dot from when" ". line line" ". chip chip"; row-gap: 2px; }
+    .row .dot { grid-area: dot; } .row .from { grid-area: from; } .row .when { grid-area: when; }
+    .row .line { grid-area: line; } .row .chip { grid-area: chip; justify-self: start; }
+  }
+
+  .open { padding: 4px 14px 16px 36px; border-top: 1px dashed var(--line); background: var(--panel); }
+  .open .meta { color: var(--muted); font-size: 12px; margin: 10px 0; overflow-wrap: anywhere; }
+  .open .body { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; margin: 0;
+                font: 13px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+  .cat { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 5px;
+         margin-right: 6px; vertical-align: 1px; border: 1px solid var(--line); color: var(--muted); }
+  .cat.reply { color: var(--accent); border-color: currentColor; }
+  .cat.read { color: var(--ink); }
+  .cat.unsorted { border-style: dashed; }
+  .urgent { display: inline-block; font-size: 11px; font-weight: 700; color: var(--bad); background: var(--bad-bg);
+            padding: 1px 6px; border-radius: 5px; margin-right: 6px; vertical-align: 1px; }
+  .sortbox { margin: 12px 0 4px; padding: 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); }
+  .sortbox .sum { font-weight: 600; }
+  .sortbox .blurb { margin-top: 4px; }
+  .sortbox .why { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .sortbox .fix { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .status { font-size: 13px; color: var(--muted); padding: 8px 12px; border: 1px dashed var(--line); border-radius: 8px; margin-bottom: 10px; }
+  .digest { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+  .digest pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .digest .hint { margin: 0 0 8px; }
+  .banner { font-size: 13px; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; color: var(--bad); background: var(--bad-bg); overflow-wrap: anywhere; }
+  .state { text-align: center; color: var(--muted); padding: 48px 16px; }
+  .state strong { display: block; color: var(--ink); font-size: 15px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>looped-in</h1>
+  <span class="step">Step 3 · Telegram</span>
+  <span class="spacer"></span>
+  <button class="btn small" id="theme" title="Toggle light/dark">Theme</button>
+</header>
+
+<main>
+  <aside>
+    <section class="card">
+      <h2>Accounts</h2>
+      <div id="accounts"></div>
+
+      <details class="add" id="add-gmail">
+        <summary><span class="chip gmail">Gmail</span> Connect Gmail</summary>
+        <form id="gmail-form" autocomplete="off">
+          <p class="hint" style="margin-top:10px">Needs 2-Step Verification. Create an app password at
+            <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>.</p>
+          <label for="g-addr">Gmail address</label>
+          <input id="g-addr" type="email" placeholder="you@gmail.com" required>
+          <label for="g-pass">App password</label>
+          <input id="g-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
+          <button class="btn primary" type="submit">Connect</button>
+          <div id="gmail-msg"></div>
+        </form>
+      </details>
+
+      <details class="add" id="add-outlook">
+        <summary><span class="chip outlook">Outlook</span> Connect Outlook</summary>
+        <form id="outlook-form" autocomplete="off">
+          <p class="hint" style="margin-top:10px">One-time app registration in the
+            <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener">Azure portal</a>
+            (steps in the README). Paste its Application (client) ID.</p>
+          <label for="o-client">Application (client) ID</label>
+          <input id="o-client" type="text" placeholder="00000000-0000-0000-0000-000000000000">
+          <button class="btn primary" type="submit">Sign in with Microsoft</button>
+          <div id="outlook-msg"></div>
+        </form>
+      </details>
+    </section>
+    <section class="card">
+      <h2>Telegram</h2>
+      <div id="telegram"></div>
+    </section>
+    <p class="hint" id="datadir"></p>
+  </aside>
+
+  <section>
+    <div class="toolbar">
+      <div class="seg" id="since" role="group" aria-label="Time window">
+        <button data-since="6h">6h</button>
+        <button data-since="24h" aria-pressed="true">24h</button>
+        <button data-since="3d">3d</button>
+        <button data-since="7d">7d</button>
+      </div>
+      <div class="seg" id="acct-filter" role="group" aria-label="Account filter"></div>
+      <div class="seg" id="cat-filter" role="group" aria-label="Category filter">
+        <button data-cat="all" aria-pressed="true">All</button>
+        <button data-cat="reply">Needs you</button>
+        <button data-cat="read">Read</button>
+        <button data-cat="fyi">FYI</button>
+        <button data-cat="noise">Noise</button>
+      </div>
+      <label class="toggle"><input type="checkbox" id="unread-only"> Unread only</label>
+      <span class="spacer"></span>
+      <span class="count" id="count"></span>
+      <button class="btn small" id="refresh">Refresh</button>
+      <button class="btn small" id="digest-btn">Digest preview</button>
+      <button class="btn small primary-sm" id="sort-btn">Sort with Claude</button>
+    </div>
+    <div id="sort-status"></div>
+    <div id="banners"></div>
+    <div id="digest"></div>
+    <div id="inbox"></div>
+  </section>
+</main>
+
+<script>
+const TOKEN = "__TOKEN__";
+const state = { accounts: [], emails: [], since: "24h", filter: "all", cat: "all", unreadOnly: false, open: null, loading: false, digestOpen: false };
+const CAT_LABEL = { reply: "Needs you", read: "Read", fyi: "FYI", noise: "Noise" };
+
+async function api(path, body) {
+  const opts = { headers: { "X-Loopedin-Token": TOKEN } };
+  if (body !== undefined) {
+    opts.method = "POST";
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 403 && data.error === "bad token") {
+    // The server restarted and issued a new token; a fresh copy of the page carries it.
+    let reloaded = false;
+    try { reloaded = sessionStorage.getItem("loopedin-reloaded") === "1"; sessionStorage.setItem("loopedin-reloaded", "1"); } catch {}
+    if (!reloaded) { location.reload(); return new Promise(() => {}); }
+    throw new Error("The control panel restarted. Reload this page.");
+  }
+  try { sessionStorage.removeItem("loopedin-reloaded"); } catch {}
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat(Infinity)) if (c != null) node.append(c instanceof Node ? c : document.createTextNode(c));
+  return node;
+}
+
+function note(target, kind, text) {
+  const box = document.getElementById(target);
+  box.replaceChildren(text ? el("div", { class: `msg ${kind}` }, text) : "");
+}
+
+// ---- accounts ---------------------------------------------------------
+async function loadAccounts() {
+  const data = await api("/api/accounts");
+  state.accounts = data.accounts;
+  document.getElementById("o-client").value ||= data.outlook_client_id || "";
+  document.getElementById("datadir").textContent = `Settings and tokens: ${data.data_dir}`;
+  state.telegram = data.telegram;
+  state.digestTimes = data.digest_times;
+  renderTelegram();
+  renderAccounts();
+  renderFilter();
+}
+
+function renderAccounts() {
+  const box = document.getElementById("accounts");
+  if (!state.accounts.length) {
+    box.replaceChildren(el("p", { class: "empty-accts" }, "No accounts connected yet."));
+    document.getElementById("add-gmail").open = true;
+    return;
+  }
+  box.replaceChildren(...state.accounts.map(a => el("div", { class: "acct" },
+    el("span", { class: `chip ${a.provider}` }, a.provider === "gmail" ? "Gmail" : "Outlook"),
+    el("span", { class: "addr", title: a.address }, a.address),
+    el("button", { class: "linkish", title: "Disconnect", onclick: (ev) => removeAccount(a, ev.currentTarget) }, "Remove"),
+  )));
+}
+
+async function removeAccount(a, btn) {
+  if (btn.dataset.armed !== "1") {         // two-click confirm, no browser dialogs
+    btn.dataset.armed = "1"; btn.textContent = "Confirm?";
+    setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Remove"; }, 3000);
+    return;
+  }
+  await api("/api/accounts/remove", a);
+  await loadAccounts();
+  loadEmails();
+}
+
+function acctLabel(address) {
+  const a = state.accounts.find(x => x.address === address);
+  const provider = a ? a.provider : "";
+  const name = provider === "gmail" ? "Gmail" : provider === "outlook" ? "Outlook" : address;
+  const same = state.accounts.filter(x => x.provider === provider).length;
+  return same > 1 ? address.split("@")[0] : name;
+}
+
+function renderFilter() {
+  const seg = document.getElementById("acct-filter");
+  if (state.accounts.length < 2) { seg.hidden = true; state.filter = "all"; return; }
+  seg.hidden = false;
+  const opts = [["all", "All"], ...state.accounts.map(a => [a.address, acctLabel(a.address)])];
+  seg.replaceChildren(...opts.map(([value, label]) => el("button", {
+    "aria-pressed": String(state.filter === value), title: value,
+    onclick: () => { state.filter = value; renderFilter(); renderInbox(); },
+  }, label)));
+}
+
+document.getElementById("gmail-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const btn = ev.submitter; btn.disabled = true; btn.textContent = "Checking with Gmail…";
+  note("gmail-msg", "", "");
+  try {
+    const r = await api("/api/gmail", {
+      address: document.getElementById("g-addr").value,
+      password: document.getElementById("g-pass").value,
+    });
+    document.getElementById("g-pass").value = "";
+    note("gmail-msg", "ok", `Connected ${r.address}.`);
+    await loadAccounts();
+    loadEmails();
+  } catch (e) {
+    note("gmail-msg", "bad", e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Connect";
+  }
+});
+
+let pollTimer = null;
+document.getElementById("outlook-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const btn = ev.submitter; btn.disabled = true;
+  note("outlook-msg", "", "");
+  try {
+    const flow = await api("/api/outlook/start", { client_id: document.getElementById("o-client").value });
+    showDeviceCode(flow);
+    clearInterval(pollTimer);
+    pollTimer = setInterval(pollOutlook, 2000);
+  } catch (e) {
+    note("outlook-msg", "bad", e.message);
+    btn.disabled = false;
+  }
+});
+
+function showDeviceCode(flow) {
+  const code = el("div", { class: "code" }, flow.code);
+  const copy = el("button", { class: "btn small", type: "button", onclick: async () => {
+    await navigator.clipboard.writeText(flow.code); copy.textContent = "Copied";
+  } }, "Copy code");
+  document.getElementById("outlook-msg").replaceChildren(el("div", { class: "devcode" },
+    el("div", { class: "hint" }, "Open this page and enter the code:"),
+    el("a", { href: flow.url, target: "_blank", rel: "noopener" }, flow.url),
+    code, copy,
+    el("p", { class: "hint", style: "margin:10px 0 0" }, "Waiting for you to finish signing in…"),
+  ));
+}
+
+async function pollOutlook() {
+  const s = await api("/api/outlook/status").catch(() => null);
+  if (!s || s.status === "pending") return;
+  clearInterval(pollTimer);
+  document.querySelector("#outlook-form button[type=submit]").disabled = false;
+  if (s.status === "done") {
+    note("outlook-msg", "ok", `Connected ${s.address}.`);
+    await loadAccounts();
+    loadEmails();
+  } else if (s.status === "error") {
+    note("outlook-msg", "bad", s.error);
+  }
+}
+
+// ---- telegram -----------------------------------------------------------
+let tgTimer = null;
+function renderTelegram(pending) {
+  const box = document.getElementById("telegram");
+  const t = state.telegram || {};
+  if (pending) {
+    const link = `https://t.me/${pending.bot}`;
+    const cmd = `/start ${pending.code}`;
+    const copy = el("button", { class: "btn small", type: "button", onclick: async () => {
+      await navigator.clipboard.writeText(cmd); copy.textContent = "Copied";
+    } }, "Copy");
+    return box.replaceChildren(el("div", { class: "devcode" },
+      el("div", { class: "hint" }, "In Telegram, open your bot and send this message:"),
+      el("a", { href: link, target: "_blank", rel: "noopener" }, `@${pending.bot}`),
+      el("div", { class: "code" }, cmd), copy,
+      el("p", { class: "hint", style: "margin:10px 0 0" }, "Waiting for your message…")));
+  }
+  if (t.paired) {
+    const times = (state.digestTimes || []).map(x => {
+      const [h, m] = x.split(":").map(Number);
+      return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }).join(", ");
+    return box.replaceChildren(
+      el("div", { class: "acct" }, el("span", { class: "chip outlook" }, "Telegram"),
+        el("span", { class: "addr" }, `@${t.bot}`),
+        el("button", { class: "linkish", onclick: (ev) => disconnectTelegram(ev.currentTarget) }, "Disconnect")),
+      el("p", { class: "hint", style: "margin:8px 0 0" }, `Digests at ${times}, plus urgent pings.`),
+      el("button", { class: "btn small", style: "margin-top:8px", onclick: testTelegram }, "Send test message"),
+      el("div", { id: "tg-msg" }));
+  }
+  const input = el("input", { id: "tg-token", type: "password", placeholder: "123456789:AAH…", autocomplete: "off" });
+  box.replaceChildren(el("form", { onsubmit: connectTelegram },
+    el("p", { class: "hint" }, "In Telegram, message ", el("a", { href: "https://t.me/BotFather", target: "_blank", rel: "noopener" }, "@BotFather"),
+      ", send /newbot, pick a name, and paste the token it gives you."),
+    el("label", { for: "tg-token" }, "Bot token"), input,
+    el("button", { class: "btn primary", type: "submit" }, "Connect Telegram"),
+    el("div", { id: "tg-msg" })));
+}
+
+async function connectTelegram(ev) {
+  ev.preventDefault();
+  const btn = ev.submitter; btn.disabled = true; btn.textContent = "Checking with Telegram…";
+  try {
+    const s = await api("/api/telegram/token", { token: document.getElementById("tg-token").value });
+    renderTelegram(s);
+    clearInterval(tgTimer);
+    tgTimer = setInterval(pollTelegram, 2000);
+  } catch (err) {
+    note("tg-msg", "bad", err.message);
+    btn.disabled = false; btn.textContent = "Connect Telegram";
+  }
+}
+
+async function pollTelegram() {
+  const s = await api("/api/telegram/status").catch(() => null);
+  if (!s || s.status === "pending") return;
+  clearInterval(tgTimer);
+  await loadAccounts();
+  if (s.status === "done") note("tg-msg", "ok", "Connected. Check Telegram for a hello.");
+  else if (s.status === "error") note("tg-msg", "bad", s.error);
+}
+
+async function testTelegram() {
+  try { await api("/api/telegram/test", {}); note("tg-msg", "ok", "Sent. Check Telegram."); }
+  catch (err) { note("tg-msg", "bad", err.message); }
+}
+
+async function disconnectTelegram(btn) {
+  if (btn.dataset.armed !== "1") {
+    btn.dataset.armed = "1"; btn.textContent = "Confirm?";
+    setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Disconnect"; }, 3000);
+    return;
+  }
+  await api("/api/telegram/disconnect", {});
+  await loadAccounts();
+}
+
+// ---- inbox ------------------------------------------------------------
+async function loadEmails() {
+  if (!state.accounts.length) { state.emails = []; renderBanners([]); return renderInbox(); }
+  state.loading = true; renderInbox();
+  const btn = document.getElementById("refresh"); btn.disabled = true;
+  try {
+    const data = await api(`/api/emails?since=${state.since}`);
+    state.emails = data.results.flatMap(r => r.emails)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    renderBanners(data.results.filter(r => r.error));
+  } catch (e) {
+    renderBanners([{ account: { address: "inbox" }, error: e.message }]);
+  } finally {
+    state.loading = false; btn.disabled = false;
+    renderInbox();
+  }
+}
+
+function renderBanners(failed) {
+  document.getElementById("banners").replaceChildren(...failed.map(r =>
+    el("div", { class: "banner" }, `${r.account.address}: ${r.error}`)));
+}
+
+const fmtTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+const fmtDay = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" });
+function when(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toDateString() === new Date().toDateString() ? fmtTime.format(d) : fmtDay.format(d);
+}
+
+function renderInbox() {
+  const box = document.getElementById("inbox");
+  const count = document.getElementById("count");
+  if (!state.accounts.length) {
+    count.textContent = "";
+    return box.replaceChildren(el("div", { class: "list" }, el("div", { class: "state" },
+      el("strong", {}, "Connect an account to see your inbox"),
+      "Gmail and Outlook emails show up here together, newest first.")));
+  }
+  if (state.loading && !state.emails.length) {
+    count.textContent = "";
+    return box.replaceChildren(el("div", { class: "list" }, el("div", { class: "state" }, "Fetching…")));
+  }
+  const shown = state.emails.filter(e =>
+    (state.filter === "all" || e.account === state.filter) && (!state.unreadOnly || !e.is_read) &&
+    (state.cat === "all" || (e.sort && e.sort.category === state.cat)));
+  const unread = shown.filter(e => !e.is_read).length;
+  count.textContent = `${shown.length} emails · ${unread} unread${state.loading ? " · refreshing…" : ""}`;
+  if (!shown.length) {
+    return box.replaceChildren(el("div", { class: "list" }, el("div", { class: "state" },
+      el("strong", {}, "Nothing here"), "No emails in this window. Try a longer one.")));
+  }
+  box.replaceChildren(el("div", { class: "list" }, shown.map(e => {
+    const key = `${e.provider}:${e.id}`;
+    const row = el("div", { class: `row${e.is_read ? "" : " unread"}`, role: "button", tabindex: "0",
+      "aria-expanded": String(state.open === key),
+      onclick: () => { state.open = state.open === key ? null : key; renderInbox(); },
+      onkeydown: (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.currentTarget.click(); } },
+    },
+      el("span", { class: "dot" }),
+      el("span", { class: "from", title: e.sender_addr }, e.sender_name || e.sender_addr),
+      el("span", { class: "line" },
+        e.sort && e.sort.urgent ? el("span", { class: "urgent" }, "Urgent") : null,
+        el("span", { class: `cat ${e.sort ? e.sort.category : "unsorted"}` }, e.sort ? CAT_LABEL[e.sort.category] : "Unsorted"),
+        el("span", { class: "subj" }, e.subject || "(no subject)"),
+        (e.sort && e.sort.summary) || e.snippet ? el("span", { class: "snip" }, ` — ${(e.sort && e.sort.summary) || e.snippet}`) : null),
+      el("span", { class: `chip ${e.provider}`, title: e.account }, acctLabel(e.account)),
+      el("span", { class: "when", title: e.date ? new Date(e.date).toLocaleString() : "" }, when(e.date)),
+    );
+    if (state.open !== key) return row;
+    const meta = [`From ${e.sender_name ? `${e.sender_name} <${e.sender_addr}>` : e.sender_addr}`,
+                  `To ${e.to.join(", ")}`, e.cc.length ? `Cc ${e.cc.join(", ")}` : null,
+                  e.date ? new Date(e.date).toLocaleString() : null].filter(Boolean).join(" · ");
+    return [row, el("div", { class: "open" },
+      e.sort ? sortBox(e) : null,
+      el("div", { class: "meta" }, meta),
+      el("pre", { class: "body" }, e.body_text || "(empty body)"))];
+  })));
+}
+
+const SOURCE_LABEL = { model: "Sorted by Claude", rule: "Sorted by a rule", you: "You corrected this", fallback: "Sorted by headers (Claude unavailable)" };
+
+function sortBox(e) {
+  const s = e.sort;
+  const fix = el("div", { class: "fix" }, "Wrong?",
+    el("div", { class: "seg", role: "group", "aria-label": "Correct category" },
+      Object.entries(CAT_LABEL).map(([cat, label]) => el("button", {
+        "aria-pressed": String(s.category === cat),
+        onclick: (ev) => { ev.stopPropagation(); correct(e, cat, s.urgent); },
+      }, label))),
+    el("label", { class: "toggle", onclick: (ev) => ev.stopPropagation() },
+      el("input", { type: "checkbox", checked: s.urgent, onchange: (ev) => correct(e, s.category, ev.target.checked) }),
+      " Urgent"));
+  const note = s.source === "you" && s.model_category && s.model_category !== s.category
+    ? ` · Claude had said ${CAT_LABEL[s.model_category]}` : "";
+  return el("div", { class: "sortbox" },
+    el("div", { class: "sum" }, s.summary || e.subject),
+    s.blurb ? el("div", { class: "blurb" }, `↳ ${s.blurb}`) : null,
+    el("div", { class: "why" }, `${SOURCE_LABEL[s.source] || s.source}${s.reason ? ` · ${s.reason}` : ""}${note}`),
+    fix);
+}
+
+async function correct(e, category, urgent) {
+  try {
+    const r = await api("/api/correct", { key: e.key, category, urgent });
+    e.sort = r.sort;
+    renderInbox();
+    if (state.digestOpen) loadDigest();
+  } catch (err) {
+    renderBanners([{ account: { address: "correction" }, error: err.message }]);
+  }
+}
+
+let sortTimer = null;
+async function startSort() {
+  const btn = document.getElementById("sort-btn");
+  btn.disabled = true;
+  try {
+    showSortStatus(await api("/api/sort", { since: state.since }));
+    clearInterval(sortTimer);
+    sortTimer = setInterval(pollSort, 1500);
+  } catch (err) {
+    btn.disabled = false;
+    renderBanners([{ account: { address: "sort" }, error: err.message }]);
+  }
+}
+
+function showSortStatus(s) {
+  const box = document.getElementById("sort-status");
+  if (s.status === "running") {
+    box.replaceChildren(el("div", { class: "status" }, s.message || "Working…"));
+  } else if (s.status === "done") {
+    const n = s.sorted_now;
+    box.replaceChildren(el("div", { class: "status" }, `Sorted ${n} new email${n === 1 ? "" : "s"}.`
+      + (s.limit_hit ? " Claude usage limit reached, so some were sorted by headers only." : "")));
+  } else {
+    box.replaceChildren();
+  }
+}
+
+async function pollSort() {
+  const s = await api("/api/sort/status").catch(() => null);
+  if (!s || s.status === "idle") return;
+  showSortStatus(s);
+  if (s.status === "running") {
+    document.getElementById("sort-btn").disabled = true;
+    if (!sortTimer) sortTimer = setInterval(pollSort, 1500);
+    return;
+  }
+  clearInterval(sortTimer); sortTimer = null;
+  document.getElementById("sort-btn").disabled = false;
+  await loadEmails();
+  renderBanners((s.errors || []).map(error => ({ account: { address: "sort" }, error })));
+  if (state.digestOpen) loadDigest();
+}
+
+async function loadDigest() {
+  const box = document.getElementById("digest");
+  if (!state.digestOpen) return box.replaceChildren();
+  try {
+    const d = await api(`/api/digest?since=${state.since}`);
+    box.replaceChildren(el("div", { class: "digest" },
+      el("p", { class: "hint" }, "What Telegram will show for this window" + (d.unsorted ? ` · ${d.unsorted} not sorted yet` : "")),
+      el("pre", {}, d.text)));
+  } catch (err) {
+    box.replaceChildren(el("div", { class: "banner" }, err.message));
+  }
+}
+
+document.getElementById("sort-btn").addEventListener("click", startSort);
+document.getElementById("digest-btn").addEventListener("click", () => {
+  state.digestOpen = !state.digestOpen;
+  document.getElementById("digest-btn").textContent = state.digestOpen ? "Hide digest" : "Digest preview";
+  loadDigest();
+});
+document.getElementById("cat-filter").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-cat]"); if (!b) return;
+  state.cat = b.dataset.cat;
+  for (const x of ev.currentTarget.children) x.setAttribute("aria-pressed", String(x === b));
+  renderInbox();
+});
+
+document.getElementById("since").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-since]"); if (!b) return;
+  state.since = b.dataset.since;
+  for (const x of ev.currentTarget.children) x.setAttribute("aria-pressed", String(x === b));
+  loadEmails().then(loadDigest);
+});
+document.getElementById("unread-only").addEventListener("change", (ev) => { state.unreadOnly = ev.target.checked; renderInbox(); });
+document.getElementById("refresh").addEventListener("click", loadEmails);
+
+// ---- theme ------------------------------------------------------------
+function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; }
+try { applyTheme(localStorage.getItem("loopedin-theme")); } catch {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = dark ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("loopedin-theme", next); } catch {}
+});
+
+loadAccounts().then(loadEmails).then(pollSort).catch(e => renderBanners([{ account: { address: "control panel" }, error: e.message }]));
+</script>
+</body>
+</html>

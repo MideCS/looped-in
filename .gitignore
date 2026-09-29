@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+*.env
+# Secrets and mail data live in %LOCALAPPDATA%\looped-in, never here.
+# These are belt-and-braces in case something lands in the repo by mistake.
+*.db
+*token*cache*
+config.local.json

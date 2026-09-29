@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Open in Outlook</title>
+<style>
+  :root { --bg: #f6f6f4; --card: #fff; --text: #1d1d1b; --muted: #6b6b66; --accent: #0f6cbd; --line: #e2e2dd; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --card: #20201f; --text: #ededea; --muted: #a3a39d; --accent: #4ea1ff; --line: #33332f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 32px 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p { margin: 0 0 16px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .meta { font-size: 14px; color: var(--muted); margin-bottom: 8px; overflow-wrap: anywhere; }
+  pre { margin: 0; white-space: pre-wrap; font: inherit; overflow-wrap: anywhere; }
+  a.button { display: block; text-align: center; text-decoration: none; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-weight: 600; }
+  a.primary { background: var(--accent); color: #fff; }
+  a.secondary { border: 1px solid var(--line); color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Your reply</h1>
+  <p>Opening Outlook. If nothing happens, tap the button.</p>
+  <div class="card">
+    <div class="meta" id="meta"></div>
+    <pre id="body"></pre>
+  </div>
+  <a class="button primary" id="outlook" href="#">Open in Outlook</a>
+  <a class="button secondary" id="mailto" href="#">Other mail app</a>
+  <a class="button secondary" id="web" href="#">Outlook on the web</a>
+</main>
+<script>
+  // The draft travels after the "#", which browsers never send to the server:
+  // GitHub only ever serves this static file and never sees the email.
+  const p = new URLSearchParams(location.hash.slice(1));
+  const to = p.get("to") || "", subject = p.get("subject") || "", body = p.get("body") || "";
+  const q = `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const links = {
+    outlook: `ms-outlook://compose?to=${encodeURIComponent(to)}&${q}`,
+    mailto: `mailto:${encodeURIComponent(to)}?${q}`,
+    web: `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&${q}`,
+  };
+  for (const [id, href] of Object.entries(links)) document.getElementById(id).href = href;
+  document.getElementById("meta").textContent = `To ${to} · ${subject}`;
+  document.getElementById("body").textContent = body;
+  const phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
+  if (to) location.href = phone ? links.outlook : links.web;
+</script>
+</body>
+</html>
