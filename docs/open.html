@@ -46,11 +46,14 @@
   const enc = encodeURIComponent;
   const android = /Android/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent);
 
-  // Opens the Outlook app at the inbox (links can't point at one email without mailbox access).
-  // Outlook handles its ms-outlook:// scheme; on Android the intent form names the app outright.
+  // Opens the Outlook app's search with the email's subject typed in, so its thread is at the top.
+  // ms-outlook://search?querytext= is the app's own search link (read from its link parser);
+  // on Android the intent form names the app outright. Computers get Outlook on the web.
+  const topic = subject.replace(/^((re|fw|fwd)\s*:\s*)+/i, "").trim();
+  const search = `search?querytext=${enc(topic)}`;
   const openOutlook = android
-    ? "intent://#Intent;scheme=ms-outlook;package=com.microsoft.office.outlook;end"
-    : ios ? "ms-outlook://" : "https://outlook.office.com/mail/";
+    ? `intent://${search}#Intent;scheme=ms-outlook;package=com.microsoft.office.outlook;end`
+    : ios ? `ms-outlook://${search}` : "https://outlook.office.com/mail/";
   const mailto = `mailto:${enc(to)}?subject=${enc(subject.match(/^re:/i) ? subject : "Re: " + subject)}&body=${enc(body)}`;
 
   document.getElementById("title").textContent = from ? `Reply to ${from}` : "Your reply";
@@ -66,9 +69,10 @@
     document.body.append(area); area.select();
     const ok = document.execCommand("copy"); area.remove(); return ok;
   }
-  document.getElementById("go").addEventListener("click", async (ev) => {
+  const go = document.getElementById("go");
+  go.addEventListener("click", async () => {
     const ok = await copy(body);
-    ev.target.textContent = ok ? "Copied ✓ Opening Outlook…" : "Couldn't copy — select the text above";
+    go.textContent = ok ? "Copied ✓ Opening Outlook…" : "Couldn't copy — select the text above";
     if (ok) location.href = openOutlook;
   });
 </script>
