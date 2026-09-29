@@ -249,7 +249,7 @@ def render_draft(email: Email, result: drafting.Draft, outlook_from: str = "") -
     parts = [f"✉️ <b>Draft to {who}</b>{sent_as}\n<i>{esc(drafting.reply_subject(email.subject))}</i>", body]
     if result.missing:
         parts.append(f"⚠️ <i>You didn't say: {esc(result.missing)}</i>")
-    parts.append("Tap 📋 Copy &amp; open Outlook, open the email, tap Reply and paste."
+    parts.append("Tap 📋 Copy &amp; open Outlook: Outlook opens searched for this email. Tap it, tap Reply and paste."
                  if outlook_from else "Saved in Gmail Drafts. Open it, check it, and press Send there.")
     return "\n\n".join(parts) + SPACER
 
