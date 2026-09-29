@@ -250,7 +250,8 @@ def render_draft(email: Email, result: drafting.Draft, outlook_from: str = "") -
     if result.missing:
         parts.append(f"⚠️ <i>You didn't say: {esc(result.missing)}</i>")
     if not outlook_from:
-        parts.append("Saved in Gmail Drafts. Open it, check it, and press Send there.")
+        parts.append("Saved in Gmail Drafts. Tap 📧 Open in Gmail: the thread opens, "
+                     "tap Edit Draft at the bottom, check it and press Send.")
     else:
         copy = "Tap 📋 Copy" if len(result.body) <= MAX_COPY else "Tap Copy on the reply above"
         parts.append(f"{copy}, then ↗ Outlook: it opens searched for this email. Tap it, tap Reply and paste.")
