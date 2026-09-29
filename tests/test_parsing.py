@@ -98,3 +98,18 @@ def test_mit_split_delivery_is_recognised_from_the_relay_hop():
            b"Date: Mon, 28 Sep 2026 20:00:00 +0000\r\nMessage-ID: <s@mit.edu>\r\n\r\nbody\r\n")
     assert gmail.parse_message(raw, "me@gmail.com").via == "mit"
     assert gmail.parse_message(HTML_ONLY, "me@gmail.com").via == ""
+
+
+def test_imap_connection_has_a_timeout(monkeypatch):
+    seen = {}
+
+    class FakeIMAP:
+        def __init__(self, host, **kw):
+            seen.update(kw)
+
+        def login(self, *a):
+            pass
+
+    monkeypatch.setattr(gmail.imaplib, "IMAP4_SSL", FakeIMAP)
+    gmail.connect("me@gmail.com", "app password")
+    assert seen["timeout"] == gmail.TIMEOUT

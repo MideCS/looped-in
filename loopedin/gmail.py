@@ -25,6 +25,7 @@ _BULK_PRECEDENCE = {"bulk", "list", "junk"}
 FETCH_BATCH = 25
 INBOX_BYTES = 150_000       # enough for the text of nearly any email
 SENT_BYTES = 40_000         # your own emails are short; this is for style examples
+TIMEOUT = 60                # seconds any one IMAP read may wait
 
 
 class GmailError(Exception):
@@ -39,7 +40,8 @@ def connect(address: str, password: str | None = None) -> imaplib.IMAP4_SSL:
     password = password or get_secret(secret_name(address))
     if not password:
         raise GmailError(f"No app password stored for {address}. Run: python -m loopedin add-gmail {address}")
-    conn = imaplib.IMAP4_SSL(HOST)
+    # Without a timeout, a connection that dies mid-read (Wi-Fi drop) blocks forever and freezes the bot.
+    conn = imaplib.IMAP4_SSL(HOST, timeout=TIMEOUT)
     try:
         conn.login(address, password.replace(" ", ""))
     except imaplib.IMAP4.error as exc:
