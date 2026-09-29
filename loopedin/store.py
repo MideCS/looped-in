@@ -374,6 +374,13 @@ class Store:
         rows = self.db.execute("SELECT at, who, text FROM chat ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return rows[::-1]
 
+    def replace_notes(self, kind: str, texts: list[str]) -> None:
+        """Replace every note of this kind, keeping the given order (the last one counts as newest)."""
+        with self.db:
+            self.db.execute("DELETE FROM notes WHERE kind = ?", (kind,))
+            self.db.executemany("INSERT INTO notes(kind, text, created_at) VALUES (?, ?, ?)",
+                                [(kind, t.strip(), _now()) for t in texts])
+
     def notes(self, kind: str, limit: int = 50) -> list[str]:
         rows = self.db.execute("SELECT text FROM notes WHERE kind = ? ORDER BY id DESC LIMIT ?", (kind, limit))
         return [r["text"] for r in rows]

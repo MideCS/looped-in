@@ -38,13 +38,16 @@ FYI collapsed behind buttons. /digest sends one now with everything open from th
 - Urgent emails ping immediately, with ✍️ Reply and ✓ Done buttons.
 - To reply: tap ✍️ under an email, or type its number and what to say ("2: thanks, Thursday works"). \
 They get a draft in their style to check and send themselves: saved in Gmail for Gmail mail, or \
-for MIT mail, an "Open in Outlook" button that opens Outlook with the reply filled in. ✏️ Change rewrites it.
+for MIT mail, 📋 Copy (copies the reply) and ↗ Outlook (opens the Outlook app searched for that \
+email; they tap it, tap Reply and paste). ✏️ Change rewrites it.
 - To dismiss: type "2 done" or "1 3 done", or just ask ("dismiss the to reads"). Urgent pings and \
 reply prompts also have a ✓ Done button; digest items don't. Dismissed emails are struck through and \
 never come back.
 - When a meeting time gets agreed over email (sent or received), a 📅 card arrives with an "Add to \
 Calendar" button that opens Google Calendar filled in; they press Save there. Calendar invites are skipped.
 - /style shows how drafts are written; "style: <rule>" adds a rule. /status checks the bot.
+- They can change how you and the bot behave by just saying so ("from now on keep answers short", \
+"Piazza is never important", "stop signing drafts Best") or with /tune: use the "tune" action.
 If you don't know why something happened, say so plainly. Never make up technical explanations.
 
 When they ask about events or plans, list things they'd attend: meetings, classes, gatherings, \
@@ -61,6 +64,9 @@ You may also request ONE action when the person clearly asks for it:
 finished email -- a separate writer drafts it). The draft is saved for them to review; nothing is sent.
 - "start_reply": they want to reply but haven't said what; the bot will ask them.
 - "dismiss": they're done with an email and want it out of their digest.
+- "tune": they want the bot to behave differently from now on (how you answer, what counts as \
+important, how drafts are written). Put their request in `notes`, in their words; another step \
+makes the change and confirms it, so leave `answer` empty.
 - "show_digest": they want to see their digest, inbox or what's waiting. The bot sends the real, \
 formatted digest, so don't list the emails yourself; just say it's coming (or leave answer empty).
 Otherwise use "none". Set `emails` to the ids from the index (e.g. ["E7"]): exactly one for reply \
@@ -86,7 +92,7 @@ SCHEMA = {
     "type": "object",
     "properties": {
         "answer": {"type": "string"},
-        "action": {"type": "string", "enum": ["none", "reply", "start_reply", "dismiss", "show_digest"]},
+        "action": {"type": "string", "enum": ["none", "reply", "start_reply", "dismiss", "show_digest", "tune"]},
         "emails": {"type": "array", "items": {"type": "string"}},
         "notes": {"type": "string"},
         "about": {"type": "array", "items": {"type": "string"}},
@@ -210,13 +216,17 @@ def save_history(store: Store, history: list[dict]) -> None:
 def ask(store: Store, question: str, accounts: set[str]) -> Result:
     index = build_index(store, accounts)
     history = load_history(store)
-    out = run_structured(build_prompt(question, index, history), schema=SCHEMA, system=SYSTEM,
+    rules = json.loads(store.get_meta("bot_rules") or "[]")
+    system = SYSTEM + ("\n\nThe person's standing instructions for you (they set these; follow them "
+                       "unless they conflict with the rules above):\n" + "\n".join(f"- {r}" for r in rules)
+                       if rules else "")
+    out = run_structured(build_prompt(question, index, history), schema=SCHEMA, system=system,
                          model="sonnet", effort="low", timeout=180)
     by_ref = {x.ref: x for x in index}
     targets = [by_ref[r.strip()] for r in out.get("emails", []) if r.strip() in by_ref]
     if out["action"] in ("reply", "start_reply"):
         targets = targets[:1]
-    action = out["action"] if targets or out["action"] == "show_digest" else "none"
+    action = out["action"] if targets or out["action"] in ("show_digest", "tune") else "none"
     about = [by_ref[r].email for r in out.get("about", []) if r in by_ref] + [t.email for t in targets]
     save_history(store, history + [{"user": question, "assistant": out["answer"],
                                     "emails": list(dict.fromkeys(key_of(e) for e in about))}])

@@ -10,7 +10,7 @@ import threading
 import time
 from datetime import datetime, time as dtime, timedelta, timezone
 
-from . import assistant, digest, gmail, meetings, sorter, style
+from . import assistant, digest, gmail, meetings, sorter, style, tune
 from .claude import ClaudeError
 from .config import Config
 from .replies import Replies
@@ -33,6 +33,7 @@ HELP = "\n\n".join([
     "/style — how I write your replies",
     "<i>style: never sign off with Best,</i> — add a rule for drafts",
     "/cancel — stop the reply in progress",
+    "/tune — change how I behave, e.g. <i>/tune keep answers to two lines</i> (or just tell me)",
     "<b>Anything else</b> — just ask, e.g. <i>what did Sam want?</i>, "
     "<i>tell me about the E14 hack</i>, <i>dismiss the Google one</i>.",
 ])
@@ -234,6 +235,13 @@ class Bot:
                 self.tg.edit(message["chat"]["id"], message["message_id"], f"✕ <s>{esc(row['title'])}</s>")
             self.tg.answer(query["id"], "Skipped")
             return
+        if data == "tune:undo":
+            undone = tune.undo(self.store)
+            self.tg.edit(message["chat"]["id"], message["message_id"],
+                         "↩ <i>Undone: back to your previous settings.</i>" if undone
+                         else "<i>Nothing to undo.</i>")
+            self.tg.answer(query["id"], "Undone" if undone else "")
+            return
         if data.startswith("rk:"):
             self.tg.answer(query["id"])
             self.replies.choose(data[3:])
@@ -309,6 +317,12 @@ class Bot:
             self.say(self.status_html())
         elif command == "/style":
             self.say("<b>How I write your replies</b>\n\n" + esc(style.describe(self.store)))
+        elif command == "/tune":
+            request = text.split(None, 1)[1].strip() if len(text.split(None, 1)) > 1 else ""
+            if request:
+                self.tune(request)
+            else:
+                self.say("<b>Your settings</b>\n\n" + esc(tune.describe(self.store)))
         elif command == "/cancel":
             self.replies.cancel()
             self.say("OK, cancelled.")
@@ -316,6 +330,23 @@ class Bot:
             self.say(HELP)
         elif not self.replies.on_text(text):
             self.ask_assistant(text)
+
+    def tune(self, request: str) -> None:
+        chat = self.config.telegram_chat_id
+        try:
+            self.tg.call("sendChatAction", chat_id=chat, action="typing")
+            change = tune.apply(self.store, request)
+        except (ClaudeError, OSError) as exc:
+            self.say(f"⚠️ Couldn't change that: {esc(str(exc))}")
+            return
+        lines = [f"🔧 {esc(change.summary)}" if change.summary else "🔧 Done."]
+        if change.changed:
+            lines.append(f"<i>Changed: {esc(', '.join(change.changed))}</i>")
+        if change.needs_code:
+            lines.append(f"⚠️ {esc(change.needs_code)}")
+        undo = {"inline_keyboard": [[{"text": "↩ Undo", "callback_data": "tune:undo"}]]} if change.changed else None
+        self.tg.send(chat, "\n\n".join(lines), reply_markup=undo)
+        self.log(f"tuned: {', '.join(change.changed) or 'nothing'}")
 
     def ask_assistant(self, text: str) -> None:
         chat = self.config.telegram_chat_id
@@ -338,6 +369,8 @@ class Bot:
             self.replies.draft(result.key, result.notes)
         elif result.action in ("reply", "start_reply"):
             self.replies.choose(result.key)
+        elif result.action == "tune":
+            self.tune(result.notes or text)
         elif result.action == "dismiss":
             self.replies.dismiss_many(result.keys)
             emails = [e for e in (self.store.email(k) for k in result.keys) if e]
