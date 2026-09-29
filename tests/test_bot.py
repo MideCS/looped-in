@@ -170,6 +170,12 @@ def test_messages_from_other_chats_are_ignored(env):
     assert "Running" in tg.sent[-1][1]
 
 
+def test_ping_replies_pong(env):
+    b, store, tg, mp = env
+    b.handle({"update_id": 1, "message": {"chat": {"id": CHAT}, "text": "/ping"}})
+    assert tg.sent[-1][1] == "pong"
+
+
 class FakeHTTP:
     def __init__(self, result):
         self.result, self.calls = result, []
