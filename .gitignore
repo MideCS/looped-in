@@ -9,3 +9,6 @@ __pycache__/
 *.db
 *token*cache*
 config.local.json
+
+# Personal Claude Code settings
+.claude/settings.local.json

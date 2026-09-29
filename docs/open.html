@@ -46,10 +46,10 @@
   const enc = encodeURIComponent;
   const android = /Android/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent);
 
-  // Opens the Outlook app itself (Outlook links can't point at one email without mailbox access).
+  // Opens the Outlook app at the inbox (links can't point at one email without mailbox access).
+  // Outlook handles its ms-outlook:// scheme; on Android the intent form names the app outright.
   const openOutlook = android
-    ? "intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;" +
-      "package=com.microsoft.office.outlook;end"
+    ? "intent://#Intent;scheme=ms-outlook;package=com.microsoft.office.outlook;end"
     : ios ? "ms-outlook://" : "https://outlook.office.com/mail/";
   const mailto = `mailto:${enc(to)}?subject=${enc(subject.match(/^re:/i) ? subject : "Re: " + subject)}&body=${enc(body)}`;
 
