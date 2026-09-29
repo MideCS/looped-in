@@ -18,6 +18,12 @@ from .config import data_dir
 
 REPO = Path(__file__).resolve().parent.parent
 PYTHON = sys.executable
+# How the editing Claude runs the tests: its shell is bash, so a repo-relative path with forward
+# slashes, which is also what its permission rule has to match.
+try:
+    TEST_PYTHON = Path(PYTHON).resolve().relative_to(REPO).as_posix()
+except ValueError:
+    TEST_PYTHON = Path(PYTHON).as_posix()
 TIMEOUT = 20 * 60
 MARK = "Changed from Telegram"   # every commit made here says so, and Undo only reverts those
 
@@ -75,10 +81,10 @@ def discard() -> None:
 
 
 def run_claude(request: str) -> str:
-    prompt = PROMPT.format(request=request, python=PYTHON, basetemp=data_dir() / "pytest")
+    prompt = PROMPT.format(request=request, python=TEST_PYTHON, basetemp=(data_dir() / "pytest").as_posix())
     command = [claude_path(), "-p", "--output-format", "json", "--no-session-persistence",
                "--strict-mcp-config", "--permission-mode", "acceptEdits",
-               "--allowedTools", f"Read,Edit,Write,Glob,Grep,Bash({PYTHON} -m pytest:*)"]
+               "--allowedTools", f"Read,Edit,Write,Glob,Grep,Bash({TEST_PYTHON} -m pytest:*)"]
     env = dict(os.environ)
     env.pop("ANTHROPIC_API_KEY", None)   # bill the plan, not a stray key
     kwargs = {}
@@ -118,9 +124,17 @@ def change(request: str) -> Outcome:
         return Outcome(False, f"{summary}\n\nThe tests failed ({detail}), so I threw the change away.")
     git("add", "-A")
     names = ", ".join(git("diff", "--cached", "--name-only").splitlines())
-    first_line = (summary.splitlines() or ["Change"])[0][:72]
+    first_line = title(summary)
     git("commit", "-q", "-m", f"{first_line}\n\n{MARK}.\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
     return Outcome(True, summary, git("rev-parse", "--short", "HEAD"), names)
+
+
+def title(summary: str) -> str:
+    """A commit title from Claude's summary: its first sentence, cut at a word if it's long."""
+    first = (summary.strip().splitlines() or ["Change from Telegram"])[0].split(". ")[0].rstrip(".")
+    if len(first) > 72:
+        first = first[:70].rsplit(" ", 1)[0] + "…"
+    return first
 
 
 def undo(commit: str) -> str:

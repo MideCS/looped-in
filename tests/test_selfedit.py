@@ -55,3 +55,9 @@ def test_uncommitted_work_on_the_laptop_is_left_alone(repo, monkeypatch):
 
 def test_undo_only_reverts_changes_made_from_telegram(repo):
     assert "isn't a change made from Telegram" in selfedit.undo("HEAD")
+
+
+def test_commit_title_is_the_first_sentence_cut_at_a_word():
+    assert selfedit.title("I added /ping. It replies pong.") == "I added /ping"
+    long = selfedit.title("I added a /ping command that replies pong, listed it in the help message and a test")
+    assert len(long) <= 72 and long.endswith("…") and " messa…" not in long
