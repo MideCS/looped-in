@@ -141,6 +141,9 @@ def cmd_telegram(args) -> int:
     return 1
 
 
+RESTART = 3   # exit code of a bot that wants to restart on changed code
+
+
 def cmd_run(args) -> int:
     from .bot import Bot
 
@@ -148,8 +151,19 @@ def cmd_run(args) -> int:
     if config.telegram_chat_id is None:
         print("Telegram isn't paired yet. Run: python -m loopedin telegram")
         return 1
-    Bot(log=lambda m: print(f"{datetime.now():%H:%M:%S} {m}", flush=True)).run_forever()
-    return 0
+    if args.child:
+        Bot(log=lambda m: print(f"{datetime.now():%H:%M:%S} {m}", flush=True)).run_forever()
+        return RESTART   # run_forever only returns when a code change asks for a restart
+    # The bot runs in a child process, so after a code change it can restart on the new code.
+    import subprocess
+    while True:
+        try:
+            code = subprocess.call([sys.executable, "-m", "loopedin", "run", "--child"])
+        except KeyboardInterrupt:
+            return 0
+        if code != RESTART:
+            return code
+        print(f"{datetime.now():%H:%M:%S} restarting on the new code", flush=True)
 
 
 def cmd_chat(args) -> int:
@@ -212,6 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=cmd_telegram)
 
     p = sub.add_parser("run", help="run the bot: check mail, ping for urgent email, send digests")
+    p.add_argument("--child", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("chat", help="print the recent Telegram chat transcript")

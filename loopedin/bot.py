@@ -10,7 +10,7 @@ import threading
 import time
 from datetime import datetime, time as dtime, timedelta, timezone
 
-from . import assistant, digest, gmail, meetings, sorter, style, tune
+from . import assistant, digest, gmail, meetings, selfedit, sorter, style, tune
 from .claude import ClaudeError
 from .config import Config
 from .replies import Replies
@@ -82,6 +82,8 @@ class Bot:
         self.inbox: queue.Queue = queue.Queue()
         self.replies = Replies(self)
         self.tg.on_sent = self._record_sent
+        self.coding = threading.Lock()   # one code change at a time
+        self.restart = False             # set after a code change; run_forever returns so the new code loads
 
     def _record_sent(self, who: str, text: str, markup: dict | None) -> None:
         buttons = [b["text"] for row in (markup or {}).get("inline_keyboard", []) for b in row]
@@ -235,6 +237,29 @@ class Bot:
                 self.tg.edit(message["chat"]["id"], message["message_id"], f"✕ <s>{esc(row['title'])}</s>")
             self.tg.answer(query["id"], "Skipped")
             return
+        if data == "code:go":
+            request = self.store.get_meta("code_request") or ""
+            if not request or self.coding.locked():
+                self.tg.answer(query["id"], "Already working on one" if request else "Nothing to change")
+                return
+            self.store.set_meta("code_request", "")
+            self.tg.answer(query["id"], "On it")
+            self.tg.edit(message["chat"]["id"], message["message_id"],
+                         f"🛠 Changing the code: <i>{esc(request)}</i>\n\nThis takes a few minutes. "
+                         "I'll message you when it's done.")
+            threading.Thread(target=self._safely, args=(self.change_code, request), daemon=True).start()
+            return
+        if data.startswith("code:undo:"):
+            self.tg.answer(query["id"])
+            try:
+                result = selfedit.undo(data.split(":", 2)[2])
+            except ClaudeError as exc:
+                result = f"Couldn't undo: {exc}"
+            self.tg.edit(message["chat"]["id"], message["message_id"], f"↩ {esc(result)}")
+            if result == "Undone.":
+                self.say("🔄 Restarting with the old code…")
+                self.restart = True
+            return
         if data == "tune:undo":
             undone = tune.undo(self.store)
             self.tg.edit(message["chat"]["id"], message["message_id"],
@@ -339,14 +364,38 @@ class Bot:
         except (ClaudeError, OSError) as exc:
             self.say(f"⚠️ Couldn't change that: {esc(str(exc))}")
             return
-        lines = [f"🔧 {esc(change.summary)}" if change.summary else "🔧 Done."]
+        lines = [f"🔧 {esc(change.summary)}" if change.summary else "🔧 Done."] if change.changed else []
         if change.changed:
             lines.append(f"<i>Changed: {esc(', '.join(change.changed))}</i>")
+        buttons = [{"text": "↩ Undo", "callback_data": "tune:undo"}] if change.changed else []
         if change.needs_code:
-            lines.append(f"⚠️ {esc(change.needs_code)}")
-        undo = {"inline_keyboard": [[{"text": "↩ Undo", "callback_data": "tune:undo"}]]} if change.changed else None
-        self.tg.send(chat, "\n\n".join(lines), reply_markup=undo)
+            self.store.set_meta("code_request", request)
+            lines.append(f"🛠 {esc(change.needs_code)}\n\nI can change the code for this on the laptop: "
+                         "Claude edits it, the tests have to pass, and then I restart with it.")
+            buttons.append({"text": "🛠 Change the code", "callback_data": "code:go"})
+        if not lines:
+            lines = [f"🔧 {esc(change.summary or 'Nothing to change.')}"]
+        self.tg.send(chat, "\n\n".join(lines), reply_markup={"inline_keyboard": [buttons]} if buttons else None)
         self.log(f"tuned: {', '.join(change.changed) or 'nothing'}")
+
+    def change_code(self, request: str) -> None:
+        with self.coding:
+            self.log(f"changing code: {request[:80]}")
+            try:
+                outcome = selfedit.change(request)
+            except (ClaudeError, OSError) as exc:
+                self.say(f"⚠️ The code change failed, nothing was changed: {esc(str(exc))}")
+                return
+            if not outcome.ok:
+                self.say(f"🛠 {esc(outcome.message)}")
+                return
+            self.tg.send(self.config.telegram_chat_id,
+                         f"🛠 {esc(outcome.message)}\n\n<i>Tests pass. Committed on the laptop as "
+                         f"{outcome.commit} (not pushed). Files: {esc(outcome.files)}</i>\n\n🔄 Restarting with it…",
+                         reply_markup={"inline_keyboard": [[{"text": "↩ Undo",
+                                                             "callback_data": f"code:undo:{outcome.commit}"}]]})
+            self.log(f"code changed: {outcome.commit}")
+            self.restart = True
 
     def ask_assistant(self, text: str) -> None:
         chat = self.config.telegram_chat_id
@@ -401,7 +450,7 @@ class Bot:
         self.log("running; Ctrl+C to stop")
 
         next_mail = now_utc()
-        while True:
+        while not self.restart:
             wait = max(0.0, min(30.0, (next_mail - now_utc()).total_seconds()))
             try:
                 update = self.inbox.get(timeout=wait)
