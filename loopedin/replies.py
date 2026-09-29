@@ -22,6 +22,9 @@ NUMBER_DONE = re.compile(r"^\s*(?:(done|dismiss|ignore)\s+)?(#?\d{1,3}(?:\s*(?:,
 # "dismiss this", "done", "no reply needed", "ignore it" -- said instead of what to reply
 DISMISS = re.compile(r"^\s*(done|dismiss|ignore|no reply( needed)?|nothing|skip)\b", re.IGNORECASE)
 # Addresses that don't read replies: offer Done, never a draft.
+# Answers to "What should change?" that mean "nothing, it's fine".
+KEEP = re.compile(r"^\s*(lgtm|looks good( to me)?|all good|it'?s (good|fine)|(that'?s )?(good|fine|perfect|great)|"
+                  r"no changes?|nothing|never ?mind|nvm|ok(ay)?|keep( it)?)\s*[.!👍]*\s*$", re.IGNORECASE)
 NO_REPLY = re.compile(r"(no-?reply|do-?not-?reply|donotreply|mailer-daemon|notifications?@)", re.IGNORECASE)
 SPACER = "\n⠀"
 
@@ -137,6 +140,10 @@ class Replies:
             self.draft(pending["value"], text)
             return True
         if pending and pending["kind"] == "change":
+            if KEEP.match(text):
+                self.cancel()
+                self.bot.say("👍 Keeping the draft as it is.")
+                return True
             self.store.add_note("feedback", text)
             self.redraft(int(pending["value"]), text)
             return True

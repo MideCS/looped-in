@@ -216,3 +216,9 @@ def test_done_accepts_several_numbers():
         assert m and bool(m.group(1)) != bool(m.group(3)) and m.group(2) == numbers, text
     m = replies.NUMBER_DONE.match("2")
     assert not (m and bool(m.group(1)) != bool(m.group(3)))
+
+
+def test_lgtm_keeps_the_draft_instead_of_rewriting():
+    for text in ["Lgtm", "looks good!", "ok", "Perfect", "no changes"]:
+        assert replies.KEEP.match(text), text
+    assert not replies.KEEP.match("make it shorter")

@@ -31,9 +31,10 @@
     <div class="meta" id="meta"></div>
     <pre id="body"></pre>
   </div>
-  <a class="button primary" id="outlook" href="#">Open in Outlook</a>
-  <a class="button secondary" id="mailto" href="#">Other mail app</a>
+  <a class="button primary" id="primary" href="#">Open in Outlook</a>
+  <a class="button secondary" id="secondary" href="#">Try the Outlook app directly</a>
   <a class="button secondary" id="web" href="#">Outlook on the web</a>
+  <p id="hint"></p>
 </main>
 <script>
   // The draft travels after the "#", which browsers never send to the server:
@@ -46,11 +47,18 @@
     mailto: `mailto:${encodeURIComponent(to)}?${q}`,
     web: `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to)}&${q}`,
   };
-  for (const [id, href] of Object.entries(links)) document.getElementById(id).href = href;
+  // Android: mailto opens the "which app?" chooser, and Outlook fills in To, subject and body.
+  // Pick Outlook with "Always" once and later taps go straight there. iOS: Outlook's own scheme.
+  const android = /Android/i.test(navigator.userAgent), ios = /iPhone|iPad/i.test(navigator.userAgent);
+  const primary = android ? links.mailto : ios ? links.outlook : links.web;
+  document.getElementById("primary").href = primary;
+  document.getElementById("secondary").href = android || ios ? (android ? links.outlook : links.mailto) : links.mailto;
+  if (!android && !ios) document.getElementById("secondary").textContent = "Default mail app";
+  document.getElementById("web").href = links.web;
+  if (android) document.getElementById("hint").textContent = "If Android asks which app, choose Outlook and tap Always.";
   document.getElementById("meta").textContent = `To ${to} · ${subject}`;
   document.getElementById("body").textContent = body;
-  const phone = /Android|iPhone|iPad/i.test(navigator.userAgent);
-  if (to) location.href = phone ? links.outlook : links.web;
+  if (to) location.href = primary;
 </script>
 </body>
 </html>
