@@ -33,7 +33,6 @@ HELP = "\n\n".join([
     "/style — how I write your replies",
     "<i>style: never sign off with Best,</i> — add a rule for drafts",
     "/cancel — stop the reply in progress",
-    "/ping — check I'm awake",
     "/tune — change how I behave, e.g. <i>/tune keep answers to two lines</i> (or just tell me)",
     "<b>Anything else</b> — just ask, e.g. <i>what did Sam want?</i>, "
     "<i>tell me about the E14 hack</i>, <i>dismiss the Google one</i>.",
@@ -352,8 +351,6 @@ class Bot:
         elif command == "/cancel":
             self.replies.cancel()
             self.say("OK, cancelled.")
-        elif command == "/ping":
-            self.say("pong")
         elif command.startswith("/") or not text:
             self.say(HELP)
         elif not self.replies.on_text(text):
